@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Secrets / local config
+.env
+
+# Runtime data created by the app (the demo CSV and sample ZIP in data/ ARE tracked)
+data/traffic.db
+data/traffic.db.tmp
+*.db
+*.db-journal
+
+# Colab / Spark working files
+traffic_work/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

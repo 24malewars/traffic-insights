@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Traffic Insights - Congestion Analysis with Apache Spark</title>
+  <meta name="description" content="Dashboard for hourly, daily and monthly traffic volume trends and estimated congestion levels.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Cpath d='M6 22l6-8 5 5 9-11' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="brand">
+      <span class="brand-logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M6 22l6-8 5 5 9-11" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="brand-text"><strong>Traffic Insights</strong><small>Apache Spark project</small></span>
+    </div>
+    <nav class="nav">
+      <a href="#overview" data-page="overview"><span class="ico">&#9638;</span> Overview</a>
+      <a href="#trends" data-page="trends"><span class="ico">&#8767;</span> Trends</a>
+      <a href="#congestion" data-page="congestion"><span class="ico">&#9680;</span> Congestion</a>
+      <a href="#records" data-page="records"><span class="ico">&#9776;</span> Records</a>
+      <a href="#import" data-page="import"><span class="ico">&#8679;</span> Import &amp; Data</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div id="sidebarBadge" class="badge badge-demo">Loading...</div>
+      <p class="fineprint">Congestion levels are <strong>estimates</strong> based on traffic volume only.</p>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <div class="content">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">&#9776;</button>
+      <h1 id="pageTitle">Overview</h1>
+      <form class="filters" id="filterForm" aria-label="Date filter" novalidate>
+        <label>From <input type="date" id="startDate"></label>
+        <label>To <input type="date" id="endDate"></label>
+        <select id="preset" aria-label="Quick range">
+          <option value="">Quick range</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="365">Last 12 months</option>
+          <option value="all">All data</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Apply</button>
+        <button type="button" class="btn" id="clearFilters">Clear</button>
+      </form>
+    </header>
+
+    <div id="banner" class="banner" hidden></div>
+
+    <main id="main" tabindex="-1">
+      <!-- OVERVIEW -->
+      <section class="page" id="page-overview" data-page="overview" aria-labelledby="pageTitle">
+        <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="grid grid-2">
+          <article class="card"><header class="card-head"><h2>Average traffic by hour of day</h2><span class="muted">vehicles / hour</span></header><div class="chart-box" data-chart="hourly"><canvas id="chartOverviewHourly"></canvas></div></article>
+          <article class="card"><header class="card-head"><h2>Estimated congestion distribution</h2><span class="muted">share of hours</span></header><div class="chart-box" data-chart="congestion"><canvas id="chartOverviewCongestion"></canvas></div></article>
+          <article class="card"><header class="card-head"><h2>Average traffic by day of week</h2></header><div class="chart-box" data-chart="weekday"><canvas id="chartOverviewWeekday"></canvas></div></article>
+          <article class="card"><header class="card-head"><h2>Daily average traffic</h2></header><div class="chart-box" data-chart="daily"><canvas id="chartOverviewDaily"></canvas></div></article>
+        </div>
+      </section>
+
+      <!-- TRENDS -->
+      <section class="page" id="page-trends" data-page="trends" hidden>
+        <div class="card">
+          <header class="card-head wrap">
+            <div class="tabs" role="tablist" aria-label="Trend type">
+              <button role="tab" class="tab" data-trend="hourly" aria-selected="true">Hourly</button>
+              <button role="tab" class="tab" data-trend="daily" aria-selected="false">Daily</button>
+              <button role="tab" class="tab" data-trend="monthly" aria-selected="false">Monthly</button>
+            </div>
+            <button class="btn" id="exportTrend">&#8681; Export CSV</button>
+          </header>
+          <div class="chart-box tall" data-chart="trend"><canvas id="chartTrend"></canvas></div>
+        </div>
+        <div class="card"><header class="card-head"><h2 id="trendTableTitle">Hourly data</h2></header><div id="trendTable"></div></div>
+      </section>
+
+      <!-- CONGESTION -->
+      <section class="page" id="page-congestion" data-page="congestion" hidden>
+        <div class="note" role="note"><strong>Estimates, not measurements.</strong> Categories come from fixed volume thresholds: Low &lt; 1500, Moderate 1500&ndash;3499, High 3500&ndash;4999, Severe &ge; 5000 vehicles per hour. They do not use speed or delay data.</div>
+        <div class="grid grid-2">
+          <article class="card"><header class="card-head"><h2>Congestion distribution</h2></header><div class="chart-box" data-chart="congestion"><canvas id="chartCongestion"></canvas></div></article>
+          <article class="card"><header class="card-head"><h2>Average traffic by weather</h2></header><div class="chart-box" data-chart="weather"><canvas id="chartWeather"></canvas></div></article>
+        </div>
+        <div class="card"><header class="card-head"><h2>Distribution table</h2><button class="btn" id="exportCongestion">&#8681; Export CSV</button></header><div id="congestionTable"></div></div>
+      </section>
+
+      <!-- RECORDS -->
+      <section class="page" id="page-records" data-page="records" hidden>
+        <div class="card">
+          <header class="card-head wrap">
+            <h2>Hourly records</h2>
+            <div class="toolbar">
+              <input type="search" id="recordSearch" placeholder="Search date, weather, holiday..." aria-label="Search records">
+              <select id="recordLevel" aria-label="Filter by congestion level">
+                <option value="">All levels</option><option>Low</option><option>Moderate</option><option>High</option><option>Severe</option>
+              </select>
+              <select id="recordPageSize" aria-label="Rows per page"><option>10</option><option selected>25</option><option>50</option><option>100</option></select>
+              <button class="btn btn-primary" id="exportRecords">&#8681; Export CSV</button>
+            </div>
+          </header>
+          <div id="recordsTable"></div>
+        </div>
+      </section>
+
+      <!-- IMPORT -->
+      <section class="page" id="page-import" data-page="import" hidden>
+        <div class="grid grid-2">
+          <article class="card">
+            <header class="card-head"><h2>Import Spark Results</h2></header>
+            <p>Upload <code>traffic_insights_results.zip</code> created by the Colab notebook. The whole ZIP is checked first; nothing changes unless every check passes.</p>
+            <form id="importForm" class="import-form">
+              <label class="dropzone" id="dropzone" for="zipInput">
+                <input type="file" id="zipInput" accept=".zip,application/zip" hidden>
+                <span class="dz-title">Drop the ZIP here or click to choose</span>
+                <span class="dz-file muted" id="zipName">No file selected</span>
+              </label>
+              <div class="row">
+                <button type="submit" class="btn btn-primary" id="importBtn" disabled>Import Spark Results</button>
+                <button type="button" class="btn btn-danger" id="resetBtn">Reset to demo data</button>
+              </div>
+            </form>
+            <div id="importResult" aria-live="polite"></div>
+            <h3>The ZIP must contain</h3>
+            <ul class="files">
+              <li><code>traffic_summary.json</code></li><li><code>hourly_trends.csv</code></li><li><code>daily_trends.csv</code></li>
+              <li><code>monthly_trends.csv</code></li><li><code>congestion_distribution.csv</code></li><li><code>cleaned_traffic.csv</code></li>
+            </ul>
+          </article>
+          <article class="card">
+            <header class="card-head"><h2>Active dataset</h2></header>
+            <div id="datasetInfo" class="dataset-info"></div>
+          </article>
+        </div>
+      </section>
+    </main>
+    <footer class="footer">Traffic Insights &middot; college project &middot; FastAPI + Chart.js + PySpark (Colab)</footer>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <script src="vendor/chart.umd.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
